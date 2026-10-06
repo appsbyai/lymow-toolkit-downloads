@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Toolkit dashboard is a plain-http web app on the user's own LAN
+     (http://<computer-ip>:8787), so this companion must allow cleartext HTTP.
+     It only ever talks to the address the user typed in. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -33,6 +33,21 @@ Grab the latest installer from the **[Releases page](../../releases/latest)**:
 **Updating from an older `.exe` build?** Uninstall the old `.exe` first, then
 install the `.msi` — or use the new `.exe` (same unsigned-file warning as above).
 
+## 📱 Android app — Lymow Companion
+
+This fork adds **[`android/`](android/README.md)** — a native Android companion
+app for the Toolkit (Kotlin + Jetpack Compose, Material 3 / Material You):
+
+- **One-step connect** to your Toolkit server (`http://<computer-ip>:8787`)
+- **Native home screen** — mower state, battery, RTK / Wi-Fi, next scheduled mow
+- **Quick actions** — Start / Pause / Dock, each behind a safety confirmation
+- **The full dashboard built in** — live map, scheduling, calendar, freshness
+  and RTK heat maps, embedded in the app
+
+Build it in Android Studio or with `gradle :app:assembleDebug` — see
+[`android/README.md`](android/README.md). A ready-made GitHub Actions workflow
+(`android/ci/android-build.yml`) builds a downloadable APK on every change.
+
 ## ⚠️ Please read — safety
 
 This software controls a **real machine with spinning blades**.

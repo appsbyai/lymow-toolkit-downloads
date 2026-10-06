@@ -6,8 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -28,16 +30,21 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lymow.toolkit.companion.data.SettingsStore
 import com.lymow.toolkit.companion.data.ThemeMode
+import com.lymow.toolkit.companion.data.ToolkitApi
 import com.lymow.toolkit.companion.ui.ConnectScreen
+import com.lymow.toolkit.companion.ui.HistoryScreen
 import com.lymow.toolkit.companion.ui.HomeScreen
+import com.lymow.toolkit.companion.ui.MapScreen
+import com.lymow.toolkit.companion.ui.ScheduleScreen
 import com.lymow.toolkit.companion.ui.SettingsScreen
-import com.lymow.toolkit.companion.ui.WebDashboardScreen
 import com.lymow.toolkit.companion.ui.theme.LymowTheme
 
 object Routes {
     const val CONNECT = "connect"
     const val HOME = "home"
-    const val DASHBOARD = "dashboard"
+    const val MAP = "map"
+    const val SCHEDULE = "schedule"
+    const val HISTORY = "history"
     const val SETTINGS = "settings"
 }
 
@@ -45,7 +52,9 @@ private data class Tab(val route: String, val label: String, val icon: ImageVect
 
 private val TABS = listOf(
     Tab(Routes.HOME, "Home", Icons.Default.Home),
-    Tab(Routes.DASHBOARD, "Dashboard", Icons.Default.Dashboard),
+    Tab(Routes.MAP, "Map", Icons.Default.Map),
+    Tab(Routes.SCHEDULE, "Schedule", Icons.Default.CalendarMonth),
+    Tab(Routes.HISTORY, "History", Icons.Default.History),
     Tab(Routes.SETTINGS, "Settings", Icons.Default.Settings),
 )
 
@@ -61,12 +70,19 @@ class MainActivity : ComponentActivity() {
 
             LymowTheme(themeMode = current?.themeMode ?: ThemeMode.SYSTEM) {
                 if (current != null) {
+                    val api = remember(current.serverUrl, current.sessionCookie) {
+                        ToolkitApi(
+                            baseUrl = current.serverUrl.ifBlank { "http://" },
+                            store = store,
+                            initialCookie = current.sessionCookie,
+                        )
+                    }
                     val start = if (current.connected && current.serverUrl.isNotBlank()) {
                         Routes.HOME
                     } else {
                         Routes.CONNECT
                     }
-                    AppNav(store = store, startAt = start)
+                    AppNav(store = store, api = api, startAt = start)
                 }
             }
         }
@@ -74,10 +90,16 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppNav(store: SettingsStore, startAt: String) {
+fun AppNav(store: SettingsStore, api: ToolkitApi, startAt: String) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
+
+    val goConnect: () -> Unit = {
+        nav.navigate(Routes.CONNECT) {
+            popUpTo(0) { inclusive = true }
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -116,23 +138,15 @@ fun AppNav(store: SettingsStore, startAt: String) {
                     },
                 )
             }
-            composable(Routes.HOME) {
-                HomeScreen(
-                    store = store,
-                    onOpenDashboard = { nav.navigate(Routes.DASHBOARD) },
-                )
-            }
-            composable(Routes.DASHBOARD) {
-                WebDashboardScreen(store = store)
-            }
+            composable(Routes.HOME) { HomeScreen(api = api, onAuthRequired = goConnect) }
+            composable(Routes.MAP) { MapScreen(api = api, onAuthRequired = goConnect) }
+            composable(Routes.SCHEDULE) { ScheduleScreen(api = api, onAuthRequired = goConnect) }
+            composable(Routes.HISTORY) { HistoryScreen(api = api, onAuthRequired = goConnect) }
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     store = store,
-                    onServerForgotten = {
-                        nav.navigate(Routes.CONNECT) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    },
+                    api = api,
+                    onServerForgotten = goConnect,
                 )
             }
         }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -38,6 +39,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.lymow.toolkit.companion.data.SettingsStore
 import com.lymow.toolkit.companion.data.ThemeMode
+import com.lymow.toolkit.companion.data.ToolkitApi
 import kotlinx.coroutines.launch
 
 private const val KOFI_URL = "https://ko-fi.com/lymow_toolkit"
@@ -46,11 +48,12 @@ private const val RELEASES_URL =
     "https://github.com/AppGuy77/lymow-toolkit-downloads/releases/latest"
 
 @Composable
-fun SettingsScreen(store: SettingsStore, onServerForgotten: () -> Unit) {
+fun SettingsScreen(store: SettingsStore, api: ToolkitApi, onServerForgotten: () -> Unit) {
     val config by store.config.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     var confirmForget by remember { mutableStateOf(false) }
+    var confirmSignOut by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -61,7 +64,7 @@ fun SettingsScreen(store: SettingsStore, onServerForgotten: () -> Unit) {
     ) {
         Text("Settings", style = MaterialTheme.typography.headlineSmall)
 
-        // Server
+        // Server & session
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text("Server", style = MaterialTheme.typography.titleMedium)
@@ -72,6 +75,15 @@ fun SettingsScreen(store: SettingsStore, onServerForgotten: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { confirmSignOut = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.Logout, contentDescription = null)
+                    Spacer(Modifier.padding(4.dp))
+                    Text("Sign out of the dashboard")
+                }
+                Spacer(Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = { confirmForget = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -141,15 +153,36 @@ fun SettingsScreen(store: SettingsStore, onServerForgotten: () -> Unit) {
         }
     }
 
+    if (confirmSignOut) {
+        AlertDialog(
+            onDismissRequest = { confirmSignOut = false },
+            title = { Text("Sign out?") },
+            text = { Text("The session on this phone ends; the server address is kept.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmSignOut = false
+                    scope.launch {
+                        api.logout()
+                        onServerForgotten()
+                    }
+                }) { Text("Sign out") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmSignOut = false }) { Text("Cancel") }
+            },
+        )
+    }
+
     if (confirmForget) {
         AlertDialog(
             onDismissRequest = { confirmForget = false },
             title = { Text("Forget this server?") },
-            text = { Text("The saved address and password will be removed from this phone.") },
+            text = { Text("The saved address and session will be removed from this phone.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmForget = false
                     scope.launch {
+                        api.logout()
                         store.forgetServer()
                         onServerForgotten()
                     }

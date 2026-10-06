@@ -1,20 +1,31 @@
 # Lymow Companion — Android app
 
-A native Android companion for the [Lymow Toolkit](https://github.com/AppGuy77/lymow-toolkit-downloads)
+A **fully native** Android companion for the [Lymow Toolkit](https://github.com/AppGuy77/lymow-toolkit-downloads)
 dashboard — the community companion server for the **Lymow One** robotic mower.
+
+No web view, no wrapper: every screen is native Jetpack Compose talking directly to the
+Toolkit's HTTP API (reverse-engineered from the v2.10.3 server bundle).
 
 > **Independent community project — not affiliated with, endorsed by, or supported by Lymow.**
 > This app can control a real machine with spinning blades. Always supervise your mower.
 
 ## Features
 
-- **One-step connect** — type the Toolkit address (e.g. `192.168.1.50`, port `8787`), tap Connect, done.
-- **Native home screen** — mower state, battery ring, RTK / Wi-Fi chips, next scheduled mow.
-- **Quick actions** — Start / Pause / Dock, each behind a safety confirmation dialog.
-- **Full dashboard built in** — the complete Toolkit web UI (live map, scheduling, mow-history
-  calendar, freshness and RTK heat maps, diagnostics) embedded in the app, so every feature works
-  with zero setup.
-- **Material 3 + Material You** — dynamic color, light/dark theme, edge-to-edge.
+- **Native sign-in** — server address → first-run password creation → password login →
+  optional 2FA (TOTP/recovery codes). The app exchanges the dashboard password for the
+  Toolkit's `lymow_session` cookie and stores only that — never the password.
+- **Home** — live status polled from `/api/telemetry`: 16 mower states (Mowing, Paused,
+  Charging, Docking…), battery ring, mow-progress %, RTK fix and network chips, fault
+  banner with the mower's own error codes, and context-aware quick actions
+  (Mow / Resume / Pause / Dock) — each behind a safety confirmation dialog.
+- **Map** — zones, no-go areas, dock and the mower's live position drawn from
+  `/api/geojson` on a Compose Canvas. Pinch to zoom, drag to pan.
+- **Schedule** — list, enable/disable, run-now, skip-next, delete, and create schedules
+  (once / weekly / even / odd days, any start time) via `/api/schedule(s)`.
+- **History** — lifetime totals (area, mow time, count), per-zone freshness
+  (`/api/zone-staleness`) and recent mow records (`/api/mow-history`).
+- **Settings** — sign out, forget server, theme (System/Light/Dark), community links.
+- **Material 3 + Material You** — dynamic color, edge-to-edge, light/dark.
 
 ## Requirements
 
@@ -40,19 +51,21 @@ dashboard — the community companion server for the **Lymow One** robotic mower
 
 ## How it talks to the Toolkit
 
-The Toolkit is a local web app served at `http://<your-computer-ip>:8787`. This app:
+The Toolkit is a FastAPI server at `http://<your-computer-ip>:8787`. This app uses its real
+endpoints — no screen-scraping, no WebView:
 
-1. **Probes** the address you give it and saves it locally (Android DataStore — nothing leaves
-   your phone; the dashboard password is stored only on-device).
-2. Renders the **full dashboard** in an embedded WebView — always complete, always up to date
-   with your Toolkit version.
-3. Additionally tries a few conventional JSON endpoints (`/api/status`, `/api/state`, …) for a
-   **native** status read-out and quick actions. The Toolkit's native API is undocumented, so if
-   a given build doesn't expose them, the home screen simply points you at the Dashboard tab —
-   nothing breaks.
+| Area | Endpoints |
+|---|---|
+| Auth | `GET /api/access/status` · `POST /api/access/setup` · `POST /api/access/login` · `POST /api/access/totp` · `POST /api/access/logout` |
+| Status | `GET /api/telemetry` (robot status codes 0–15, battery, clean %, error codes, RTK fix) |
+| Control | `POST /api/mow` · `POST /api/command/{pause\|resume\|dock\|…}` · `GET /api/commands` |
+| Schedules | `GET /api/schedules` · `POST /api/schedule` · `DELETE /api/schedule/{id}` · `POST /api/schedule/{id}/skip` · `POST /api/schedule/{id}/run` |
+| History | `GET /api/mow-totals` · `GET /api/mow-history` · `GET /api/zone-staleness` |
+| Map | `GET /api/geojson` (zones, no-go, dock, robot position) |
 
-Cleartext HTTP is allowed on purpose: the Toolkit serves plain HTTP on your own LAN, and the app
-only ever contacts the address you typed in.
+Unsafe methods pass the Toolkit's same-origin check because the app sends no `Origin` header
+(it is not a browser). Cleartext HTTP is allowed on purpose: the Toolkit serves plain HTTP on
+your own LAN, and the app only ever contacts the address you typed in.
 
 ## Project layout
 
@@ -61,9 +74,11 @@ android/
 ├── app/
 │   └── src/main/
 │       ├── java/com/lymow/toolkit/companion/
-│       │   ├── MainActivity.kt          # nav host + bottom bar
-│       │   ├── data/                    # DataStore settings + OkHttp Toolkit client
-│       │   └── ui/                      # Connect / Home / Web dashboard / Settings screens
+│       │   ├── MainActivity.kt          # 5-tab nav host
+│       │   ├── data/
+│       │   │   ├── SettingsStore.kt     # server URL + session cookie (DataStore)
+│       │   │   └── ToolkitApi.kt        # the native API client
+│       │   └── ui/                      # Connect / Home / Map / Schedule / History / Settings
 │       └── res/                         # icons, theme, network config
 ├── ci/android-build.yml                 # GitHub Actions workflow (move to .github/workflows/)
 └── build.gradle.kts                     # Kotlin 2.0 + Jetpack Compose, minSdk 26

@@ -1,0 +1,45 @@
+# GitHub Actions workflow — builds the Android APK automatically.
+#
+# To enable it, move this file to:  .github/workflows/android-build.yml
+# (It could not be committed there directly because the GitHub token used
+# to publish this fork lacks the 'workflow' OAuth scope.)
+
+name: Build Android APK
+
+on:
+  push:
+    paths:
+      - "android/**"
+      - ".github/workflows/android-build.yml"
+  pull_request:
+    paths:
+      - "android/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The repo intentionally ships no gradle-wrapper.jar; generate it here.
+      - name: Generate Gradle wrapper
+        working-directory: android
+        run: gradle wrapper --gradle-version 8.9 --distribution-type bin
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: lymow-companion-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk

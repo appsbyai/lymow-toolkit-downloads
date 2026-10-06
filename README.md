@@ -35,14 +35,17 @@ install the `.msi` — or use the new `.exe` (same unsigned-file warning as abov
 
 ## 📱 Android app — Lymow Companion
 
-This fork adds **[`android/`](android/README.md)** — a native Android companion
-app for the Toolkit (Kotlin + Jetpack Compose, Material 3 / Material You):
+This fork adds **[`android/`](android/README.md)** — a **fully native** Android
+companion app for the Toolkit (Kotlin + Jetpack Compose, Material 3 / Material
+You). No web view: every screen talks directly to the Toolkit's HTTP API.
 
-- **One-step connect** to your Toolkit server (`http://<computer-ip>:8787`)
-- **Native home screen** — mower state, battery, RTK / Wi-Fi, next scheduled mow
-- **Quick actions** — Start / Pause / Dock, each behind a safety confirmation
-- **The full dashboard built in** — live map, scheduling, calendar, freshness
-  and RTK heat maps, embedded in the app
+- **Native sign-in** — first-run password setup, login, 2FA; only the session
+  cookie is stored, never your password
+- **Home** — live mower status, battery ring, fault banner, RTK/network chips,
+  and confirmed quick actions (Mow / Pause / Resume / Dock)
+- **Map** — zones, no-go areas, dock and the mower's live position, pinch-zoom
+- **Schedule** — create / enable / run / skip / delete schedules
+- **History** — lifetime totals, per-zone freshness, recent mows
 
 Build it in Android Studio or with `gradle :app:assembleDebug` — see
 [`android/README.md`](android/README.md). A ready-made GitHub Actions workflow
